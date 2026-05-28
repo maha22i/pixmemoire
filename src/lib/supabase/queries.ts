@@ -3,6 +3,8 @@ import type {
   Category,
   Personality,
   PersonalityWithCategories,
+  Subcategory,
+  SubcategoryWithCategory,
   TimelineEvent,
 } from "@/types/database.types";
 
@@ -11,11 +13,12 @@ async function supabase() {
 }
 
 function toPersonalityWithCategories(
-  row: Personality & { categories?: Category[] }
+  row: Personality & { categories?: Category[]; subcategories?: Subcategory[] }
 ): PersonalityWithCategories {
   return {
     ...row,
     categories: row.categories ?? [],
+    subcategories: row.subcategories ?? [],
   };
 }
 
@@ -30,6 +33,68 @@ export async function getAllCategories(): Promise<Category[]> {
     return [];
   }
   return data ?? [];
+}
+
+export async function getAllSubcategories(): Promise<Subcategory[]> {
+  const db = await supabase();
+  const { data, error } = await db
+    .from("subcategories")
+    .select("*")
+    .order("order", { ascending: true });
+  if (error) {
+    console.error("getAllSubcategories error:", error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+export async function getSubcategoriesByCategory(
+  categoryId: string
+): Promise<Subcategory[]> {
+  const db = await supabase();
+  const { data, error } = await db
+    .from("subcategories")
+    .select("*")
+    .eq("category_id", categoryId)
+    .order("order", { ascending: true });
+  if (error) return [];
+  return data ?? [];
+}
+
+export async function getSubcategoryBySlug(
+  categorySlug: string,
+  subcategorySlug: string
+): Promise<Subcategory | null> {
+  const db = await supabase();
+  const category = await getCategoryBySlug(categorySlug);
+  if (!category) return null;
+
+  const { data, error } = await db
+    .from("subcategories")
+    .select("*")
+    .eq("category_id", category.id)
+    .eq("slug", subcategorySlug)
+    .single();
+  if (error) return null;
+  return data;
+}
+
+export async function getFeaturedSubcategories(
+  limit = 6
+): Promise<SubcategoryWithCategory[]> {
+  const db = await supabase();
+  const { data, error } = await db
+    .from("subcategories")
+    .select("*, category:categories(*)")
+    .eq("featured", true)
+    .order("order", { ascending: true })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return data.map((row) => ({
+    ...row,
+    category: row.category as Category,
+  }));
 }
 
 export async function getCategoryBySlug(
@@ -60,22 +125,31 @@ export async function getAllPersonalities(): Promise<
     return [];
   }
 
-  return attachCategories(personalities);
+  return attachCategoriesAndSubcategories(personalities);
 }
 
-export async function getFeaturedPersonalities(): Promise<
-  PersonalityWithCategories[]
-> {
+export async function getFeaturedPersonalities(
+  limit = 6
+): Promise<PersonalityWithCategories[]> {
   const db = await supabase();
   const { data: personalities, error } = await db
     .from("personalities")
     .select("*")
     .eq("status", "published")
-    .eq("featured", true)
-    .order("views_count", { ascending: false });
+    .eq("featured", true);
 
   if (error || !personalities) return [];
-  return attachCategories(personalities);
+
+  const sorted = [...personalities]
+    .sort((a, b) => {
+      const orderA = a.featured_order ?? 0;
+      const orderB = b.featured_order ?? 0;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.full_name.localeCompare(b.full_name);
+    })
+    .slice(0, limit);
+
+  return attachCategoriesAndSubcategories(sorted);
 }
 
 export async function getRecentPersonalities(
@@ -90,7 +164,7 @@ export async function getRecentPersonalities(
     .limit(limit);
 
   if (error || !personalities) return [];
-  return attachCategories(personalities);
+  return attachCategoriesAndSubcategories(personalities);
 }
 
 export async function searchPersonalities(
@@ -102,12 +176,10 @@ export async function searchPersonalities(
     .from("personalities")
     .select("*")
     .eq("status", "published")
-    .or(
-      `full_name.ilike.${q},display_name.ilike.${q},title.ilike.${q},short_bio.ilike.${q}`
-    );
+    .or(`full_name.ilike.${q},display_name.ilike.${q}`);
 
   if (error || !personalities) return [];
-  return attachCategories(personalities);
+  return attachCategoriesAndSubcategories(personalities);
 }
 
 export async function getPersonalitiesByCategory(
@@ -118,23 +190,158 @@ export async function getPersonalitiesByCategory(
   const category = await getCategoryBySlug(categorySlug);
   if (!category) return [];
 
-  const { data: links, error: linkError } = await db
+  const { data: directLinks } = await db
     .from("personality_categories")
     .select("personality_id")
     .eq("category_id", category.id);
 
+  const subcategories = await getSubcategoriesByCategory(category.id);
+  const subIds = subcategories.map((s) => s.id);
+
+  let subPersonalityIds: string[] = [];
+  if (subIds.length > 0) {
+    const { data: subLinks } = await db
+      .from("personality_subcategories")
+      .select("personality_id")
+      .in("subcategory_id", subIds);
+    subPersonalityIds = subLinks?.map((l) => l.personality_id) ?? [];
+  }
+
+  const allIds = [
+    ...new Set([
+      ...(directLinks?.map((l) => l.personality_id) ?? []),
+      ...subPersonalityIds,
+    ]),
+  ];
+
+  if (allIds.length === 0) return [];
+
+  const { data: personalities, error } = await db
+    .from("personalities")
+    .select("*")
+    .eq("status", "published")
+    .in("id", allIds)
+    .order("full_name", { ascending: true });
+
+  if (error || !personalities) return [];
+  return attachCategoriesAndSubcategories(personalities);
+}
+
+export async function getCategoryPageStructure(categorySlug: string) {
+  const category = await getCategoryBySlug(categorySlug);
+  if (!category) return null;
+
+  const subcategories = await getSubcategoriesByCategory(category.id);
+  const db = await supabase();
+
+  const subSections = await Promise.all(
+    subcategories.map(async (sub) => ({
+      subcategory: sub,
+      personalities: await getPersonalitiesBySubcategory(categorySlug, sub.slug),
+    }))
+  );
+
+  const subPersonalityIds = new Set<string>();
+  for (const section of subSections) {
+    section.personalities.forEach((p) => subPersonalityIds.add(p.id));
+  }
+
+  const { data: directLinks } = await db
+    .from("personality_categories")
+    .select("personality_id")
+    .eq("category_id", category.id);
+
+  const directIds = (directLinks ?? [])
+    .map((l) => l.personality_id)
+    .filter((id) => !subPersonalityIds.has(id));
+
+  let directPersonalities: PersonalityWithCategories[] = [];
+  if (directIds.length > 0) {
+    const { data: personalities } = await db
+      .from("personalities")
+      .select("*")
+      .eq("status", "published")
+      .in("id", directIds)
+      .order("full_name", { ascending: true });
+    if (personalities) {
+      directPersonalities = await attachCategoriesAndSubcategories(personalities);
+    }
+  }
+
+  return {
+    category,
+    subSections,
+    directPersonalities,
+  };
+}
+
+export async function getPersonalitiesBySubcategory(
+  categorySlug: string,
+  subcategorySlug: string
+): Promise<PersonalityWithCategories[]> {
+  const db = await supabase();
+  const subcategory = await getSubcategoryBySlug(categorySlug, subcategorySlug);
+  if (!subcategory) return [];
+
+  const { data: links, error: linkError } = await db
+    .from("personality_subcategories")
+    .select("personality_id, order")
+    .eq("subcategory_id", subcategory.id)
+    .order("order", { ascending: true });
+
   if (linkError || !links || links.length === 0) return [];
+
+  const orderMap = new Map(links.map((l) => [l.personality_id, l.order]));
+  const ids = links.map((l) => l.personality_id);
+
+  const { data: personalities, error } = await db
+    .from("personalities")
+    .select("*")
+    .eq("status", "published")
+    .in("id", ids);
+
+  if (error || !personalities) return [];
+
+  const sorted = [...personalities].sort((a, b) => {
+    const orderA = orderMap.get(a.id) ?? 0;
+    const orderB = orderMap.get(b.id) ?? 0;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.full_name.localeCompare(b.full_name);
+  });
+
+  return attachCategoriesAndSubcategories(sorted);
+}
+
+export async function getPersonalitiesForSubcategoryHome(
+  subcategoryId: string,
+  limit = 4
+): Promise<PersonalityWithCategories[]> {
+  const db = await supabase();
+
+  const { data: links } = await db
+    .from("personality_subcategories")
+    .select("personality_id, order")
+    .eq("subcategory_id", subcategoryId)
+    .order("order", { ascending: true })
+    .limit(limit);
+
+  if (!links || links.length === 0) return [];
 
   const ids = links.map((l) => l.personality_id);
   const { data: personalities, error } = await db
     .from("personalities")
     .select("*")
     .eq("status", "published")
-    .in("id", ids)
-    .order("full_name", { ascending: true });
+    .in("id", ids);
 
   if (error || !personalities) return [];
-  return attachCategories(personalities);
+
+  const orderMap = new Map(links.map((l) => [l.personality_id, l.order]));
+  return attachCategoriesAndSubcategories(
+    [...personalities].sort(
+      (a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0)
+    )
+  );
 }
 
 export async function getPersonalityBySlug(
@@ -174,6 +381,32 @@ export async function getPersonalityCategories(
   return categories ?? [];
 }
 
+export async function getPersonalitySubcategories(
+  personalityId: string
+): Promise<(Subcategory & { order: number })[]> {
+  const db = await supabase();
+  const { data: links, error: linkError } = await db
+    .from("personality_subcategories")
+    .select("subcategory_id, order")
+    .eq("personality_id", personalityId)
+    .order("order", { ascending: true });
+
+  if (linkError || !links || links.length === 0) return [];
+
+  const subIds = links.map((l) => l.subcategory_id);
+  const { data: subcategories, error } = await db
+    .from("subcategories")
+    .select("*")
+    .in("id", subIds);
+
+  if (error || !subcategories) return [];
+
+  const orderMap = new Map(links.map((l) => [l.subcategory_id, l.order]));
+  return subcategories
+    .map((s) => ({ ...s, order: orderMap.get(s.id) ?? 0 }))
+    .sort((a, b) => a.order - b.order);
+}
+
 export async function getTimelineEvents(
   personalityId: string
 ): Promise<TimelineEvent[]> {
@@ -199,19 +432,44 @@ export async function getRelatedPersonalities(
     .select("category_id")
     .eq("personality_id", personalityId);
 
-  if (!myCatLinks || myCatLinks.length === 0) return [];
+  const { data: mySubLinks } = await db
+    .from("personality_subcategories")
+    .select("subcategory_id")
+    .eq("personality_id", personalityId);
 
-  const catIds = myCatLinks.map((l) => l.category_id);
+  if (
+    (!myCatLinks || myCatLinks.length === 0) &&
+    (!mySubLinks || mySubLinks.length === 0)
+  ) {
+    return [];
+  }
 
-  const { data: relatedLinks } = await db
-    .from("personality_categories")
-    .select("personality_id")
-    .in("category_id", catIds)
-    .neq("personality_id", personalityId);
+  const catIds = myCatLinks?.map((l) => l.category_id) ?? [];
+  const subIds = mySubLinks?.map((l) => l.subcategory_id) ?? [];
 
-  if (!relatedLinks || relatedLinks.length === 0) return [];
+  const relatedIds = new Set<string>();
 
-  const uniqueIds = [...new Set(relatedLinks.map((l) => l.personality_id))];
+  if (catIds.length > 0) {
+    const { data: relatedCatLinks } = await db
+      .from("personality_categories")
+      .select("personality_id")
+      .in("category_id", catIds)
+      .neq("personality_id", personalityId);
+    relatedCatLinks?.forEach((l) => relatedIds.add(l.personality_id));
+  }
+
+  if (subIds.length > 0) {
+    const { data: relatedSubLinks } = await db
+      .from("personality_subcategories")
+      .select("personality_id")
+      .in("subcategory_id", subIds)
+      .neq("personality_id", personalityId);
+    relatedSubLinks?.forEach((l) => relatedIds.add(l.personality_id));
+  }
+
+  if (relatedIds.size === 0) return [];
+
+  const uniqueIds = [...relatedIds];
   const { data: personalities, error } = await db
     .from("personalities")
     .select("*")
@@ -220,7 +478,7 @@ export async function getRelatedPersonalities(
     .limit(limit);
 
   if (error || !personalities) return [];
-  return attachCategories(personalities);
+  return attachCategoriesAndSubcategories(personalities);
 }
 
 export async function getPersonalityCount(): Promise<number> {
@@ -257,7 +515,30 @@ export async function getPublishedPersonalitiesForSitemap(): Promise<
   return data ?? [];
 }
 
-async function attachCategories(
+export async function getSubcategoriesForSitemap(): Promise<
+  { category_slug: string; slug: string }[]
+> {
+  const db = await supabase();
+  const { data, error } = await db.from("subcategories").select(`
+      slug,
+      category:categories(slug)
+    `);
+
+  if (error || !data) return [];
+  return data
+    .map((row) => {
+      const cat = row.category;
+      const categorySlug =
+        cat && typeof cat === "object" && "slug" in cat
+          ? (cat as { slug: string }).slug
+          : null;
+      if (!categorySlug) return null;
+      return { category_slug: categorySlug, slug: row.slug as string };
+    })
+    .filter((row): row is { category_slug: string; slug: string } => row !== null);
+}
+
+async function attachCategoriesAndSubcategories(
   personalities: Personality[]
 ): Promise<PersonalityWithCategories[]> {
   if (personalities.length === 0) return [];
@@ -265,30 +546,51 @@ async function attachCategories(
   const db = await supabase();
   const ids = personalities.map((p) => p.id);
 
-  const { data: links } = await db
-    .from("personality_categories")
-    .select("personality_id, category_id")
-    .in("personality_id", ids);
+  const [{ data: catLinks }, { data: subLinks }] = await Promise.all([
+    db
+      .from("personality_categories")
+      .select("personality_id, category_id")
+      .in("personality_id", ids),
+    db
+      .from("personality_subcategories")
+      .select("personality_id, subcategory_id")
+      .in("personality_id", ids),
+  ]);
 
-  if (!links || links.length === 0) {
-    return personalities.map((p) => toPersonalityWithCategories(p));
-  }
+  const catIds = [...new Set((catLinks ?? []).map((l) => l.category_id))];
+  const subIds = [...new Set((subLinks ?? []).map((l) => l.subcategory_id))];
 
-  const catIds = [...new Set(links.map((l) => l.category_id))];
-  const { data: categories } = await db
-    .from("categories")
-    .select("*")
-    .in("id", catIds);
+  const [{ data: categories }, { data: subcategories }] = await Promise.all([
+    catIds.length > 0
+      ? db.from("categories").select("*").in("id", catIds)
+      : Promise.resolve({ data: [] as Category[] }),
+    subIds.length > 0
+      ? db.from("subcategories").select("*").in("id", subIds)
+      : Promise.resolve({ data: [] as Subcategory[] }),
+  ]);
 
   const catMap = new Map((categories ?? []).map((c) => [c.id, c]));
+  const subMap = new Map((subcategories ?? []).map((s) => [s.id, s]));
 
   return personalities.map((p) => {
-    const pCatIds = links
+    const pCatIds = (catLinks ?? [])
       .filter((l) => l.personality_id === p.id)
       .map((l) => l.category_id);
+    const pSubIds = (subLinks ?? [])
+      .filter((l) => l.personality_id === p.id)
+      .map((l) => l.subcategory_id);
+
     const pCats = pCatIds
       .map((cid) => catMap.get(cid))
       .filter((c): c is Category => c !== undefined);
-    return toPersonalityWithCategories({ ...p, categories: pCats });
+    const pSubs = pSubIds
+      .map((sid) => subMap.get(sid))
+      .filter((s): s is Subcategory => s !== undefined);
+
+    return toPersonalityWithCategories({
+      ...p,
+      categories: pCats,
+      subcategories: pSubs,
+    });
   });
 }

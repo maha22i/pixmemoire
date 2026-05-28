@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { matchesPersonalityNameSearch } from "@/lib/utils/personality-search";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -54,12 +55,8 @@ export async function GET(request: NextRequest) {
   let results = rawData ?? [];
 
   if (q) {
-    results = results.filter(
-      (p) =>
-        p.full_name.toLowerCase().includes(q) ||
-        p.display_name.toLowerCase().includes(q) ||
-        p.title.toLowerCase().includes(q) ||
-        p.short_bio.toLowerCase().includes(q)
+    results = results.filter((p) =>
+      matchesPersonalityNameSearch(p.full_name, p.display_name, q)
     );
   }
 

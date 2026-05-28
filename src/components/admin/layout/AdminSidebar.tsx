@@ -14,6 +14,7 @@ import {
   LogOut,
   ChevronRight,
   Bot,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -41,6 +42,11 @@ const NAV_ITEMS = [
     label: "Catégories",
     href: "/admin/categories",
     icon: Tag,
+  },
+  {
+    label: "À la une",
+    href: "/admin/a-la-une",
+    icon: Sparkles,
   },
   {
     label: "Suggestions",

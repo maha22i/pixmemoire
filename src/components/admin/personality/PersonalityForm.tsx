@@ -11,7 +11,13 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import ImageUploader from "@/components/admin/forms/ImageUploader";
 import SlugInput from "@/components/admin/forms/SlugInput";
-import type { Personality, Category, VideoEntry, SourceEntry } from "@/types/database.types";
+import type {
+  Personality,
+  Category,
+  Subcategory,
+  VideoEntry,
+  SourceEntry,
+} from "@/types/database.types";
 
 const personalitySchema = z.object({
   full_name: z.string().min(1, "Le nom complet est requis"),
@@ -39,10 +45,17 @@ const personalitySchema = z.object({
 
 type FormData = z.infer<typeof personalitySchema>;
 
+interface SubcategoryLink {
+  subcategory_id: string;
+  order: number;
+}
+
 interface PersonalityFormProps {
   personality?: Personality;
   categories: Category[];
+  subcategories?: Subcategory[];
   linkedCategoryIds?: string[];
+  linkedSubcategories?: SubcategoryLink[];
   timelineEvents?: Array<{
     id: string;
     event_date: string;
@@ -80,13 +93,16 @@ const ERAS = [
 export default function PersonalityForm({
   personality,
   categories,
+  subcategories = [],
   linkedCategoryIds = [],
+  linkedSubcategories = [],
   mode,
 }: PersonalityFormProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
   const [mainPhoto, setMainPhoto] = useState(personality?.main_photo_url || "");
   const [selectedCategories, setSelectedCategories] = useState<string[]>(linkedCategoryIds);
+  const [selectedSubs, setSelectedSubs] = useState<SubcategoryLink[]>(linkedSubcategories);
   const [galleryUrls, setGalleryUrls] = useState<string[]>(personality?.gallery_urls || []);
   const [videos, setVideos] = useState<VideoEntry[]>(personality?.video_urls || []);
   const [sources, setSources] = useState<SourceEntry[]>(personality?.sources || []);
@@ -122,6 +138,98 @@ export default function PersonalityForm({
   const shortBio = watch("short_bio");
   const slug = watch("slug");
 
+  const subsByCategory = subcategories.reduce<Record<string, Subcategory[]>>(
+    (acc, sub) => {
+      if (!acc[sub.category_id]) acc[sub.category_id] = [];
+      acc[sub.category_id].push(sub);
+      return acc;
+    },
+    {}
+  );
+
+  const saveCategoryLinks = async (
+    supabase: ReturnType<typeof createClient>,
+    personalityId: string
+  ) => {
+    const parentCatIds = selectedSubs
+      .map((s) => subcategories.find((sub) => sub.id === s.subcategory_id)?.category_id)
+      .filter((id): id is string => !!id);
+
+    const allCategoryIds = [
+      ...new Set([...selectedCategories, ...parentCatIds]),
+    ];
+
+    await supabase
+      .from("personality_categories")
+      .delete()
+      .eq("personality_id", personalityId);
+
+    await supabase
+      .from("personality_subcategories")
+      .delete()
+      .eq("personality_id", personalityId);
+
+    if (allCategoryIds.length > 0) {
+      await supabase.from("personality_categories").insert(
+        allCategoryIds.map((catId) => ({
+          personality_id: personalityId,
+          category_id: catId,
+        }))
+      );
+    }
+
+    if (selectedSubs.length > 0) {
+      await supabase.from("personality_subcategories").insert(
+        selectedSubs.map((s) => ({
+          personality_id: personalityId,
+          subcategory_id: s.subcategory_id,
+          order: s.order,
+        }))
+      );
+    }
+  };
+
+  const toggleCategory = (catId: string) => {
+    const subsInCat = subsByCategory[catId] || [];
+    const hasSubsSelected = selectedSubs.some((s) =>
+      subsInCat.some((sub) => sub.id === s.subcategory_id)
+    );
+
+    if (selectedCategories.includes(catId)) {
+      setSelectedCategories((prev) => prev.filter((id) => id !== catId));
+    } else if (!hasSubsSelected) {
+      setSelectedCategories((prev) => [...prev, catId]);
+    }
+  };
+
+  const toggleSubcategory = (sub: Subcategory) => {
+    const isSelected = selectedSubs.some((s) => s.subcategory_id === sub.id);
+
+    if (isSelected) {
+      setSelectedSubs((prev) =>
+        prev.filter((s) => s.subcategory_id !== sub.id)
+      );
+    } else {
+      setSelectedCategories((prev) => prev.filter((id) => id !== sub.category_id));
+      const siblingsCount = (selectedSubs.filter((s) => {
+        const sibling = subcategories.find((x) => x.id === s.subcategory_id);
+        return sibling?.category_id === sub.category_id;
+      }).length) + 1;
+      setSelectedSubs((prev) => [
+        ...prev,
+        { subcategory_id: sub.id, order: siblingsCount },
+      ]);
+    }
+  };
+
+  const updateSubOrder = (subcategoryId: string, order: number) => {
+    setSelectedSubs((prev) =>
+      prev.map((s) =>
+        s.subcategory_id === subcategoryId ? { ...s, order } : s
+      )
+    );
+  };
+
   const onSubmit = async (data: FormData, status: "draft" | "published") => {
     setIsSaving(true);
 
@@ -150,19 +258,7 @@ export default function PersonalityForm({
 
         if (error) throw error;
 
-        await supabase
-          .from("personality_categories")
-          .delete()
-          .eq("personality_id", personality.id);
-
-        if (selectedCategories.length > 0) {
-          await supabase.from("personality_categories").insert(
-            selectedCategories.map((catId) => ({
-              personality_id: personality.id,
-              category_id: catId,
-            }))
-          );
-        }
+        await saveCategoryLinks(supabase, personality.id);
 
         toast.success(
           status === "published"
@@ -178,13 +274,8 @@ export default function PersonalityForm({
 
         if (error) throw error;
 
-        if (selectedCategories.length > 0 && newPersonality) {
-          await supabase.from("personality_categories").insert(
-            selectedCategories.map((catId) => ({
-              personality_id: newPersonality.id,
-              category_id: catId,
-            }))
-          );
+        if (newPersonality) {
+          await saveCategoryLinks(supabase, newPersonality.id);
         }
 
         toast.success(
@@ -482,43 +573,122 @@ export default function PersonalityForm({
         )}
 
         {activeTab === 2 && (
-          <div className="bg-white rounded-xl border border-[#E5E5E5] p-6">
-            <h3 className="text-sm font-medium text-[#1A1A1A] mb-4">
-              Sélectionnez les catégories
-            </h3>
+          <div className="bg-white rounded-xl border border-[#E5E5E5] p-6 space-y-6">
+            <div>
+              <h3 className="text-sm font-medium text-[#1A1A1A] mb-1">
+                Catégories et sous-catégories
+              </h3>
+              <p className="text-xs text-[#6B6B6B]">
+                Classez dans une catégorie directement, ou dans une sous-catégorie
+                (avec ordre d&apos;affichage). Une sous-catégorie lie automatiquement
+                la catégorie parente.
+              </p>
+            </div>
             {categories.length === 0 ? (
               <p className="text-sm text-[#6B6B6B]">
-                Aucune catégorie disponible. Créez-en d'abord dans le module Catégories.
+                Aucune catégorie disponible. Créez-en d&apos;abord dans le module Catégories.
               </p>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {categories.map((cat) => (
-                  <label
-                    key={cat.id}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                      selectedCategories.includes(cat.id)
-                        ? "border-[#F5A623] bg-[#F5A623]/5"
-                        : "border-[#E5E5E5] hover:border-[#F5A623]/50"
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(cat.id)}
-                      onChange={() => {
-                        setSelectedCategories((prev) =>
-                          prev.includes(cat.id)
-                            ? prev.filter((id) => id !== cat.id)
-                            : [...prev, cat.id]
-                        );
-                      }}
-                      className="accent-[#F5A623]"
-                    />
-                    <span className="text-sm font-medium text-[#1A1A1A]">
-                      {cat.name}
-                    </span>
-                  </label>
-                ))}
+              <div className="space-y-4">
+                {categories.map((cat) => {
+                  const catSubs = (subsByCategory[cat.id] || []).sort(
+                    (a, b) => a.order - b.order
+                  );
+                  const hasSubsSelected = selectedSubs.some((s) =>
+                    catSubs.some((sub) => sub.id === s.subcategory_id)
+                  );
+                  const isCatSelected =
+                    selectedCategories.includes(cat.id) && !hasSubsSelected;
+
+                  return (
+                    <div
+                      key={cat.id}
+                      className="rounded-lg border border-[#E5E5E5] overflow-hidden"
+                    >
+                      <label
+                        className={cn(
+                          "flex items-center gap-3 p-4 cursor-pointer transition-all",
+                          isCatSelected
+                            ? "bg-[#F5A623]/5 border-b border-[#F5A623]/20"
+                            : "bg-[#FAFAFA] hover:bg-[#F8F8F8]"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isCatSelected}
+                          disabled={hasSubsSelected}
+                          onChange={() => toggleCategory(cat.id)}
+                          className="accent-[#F5A623]"
+                        />
+                        <div>
+                          <span className="text-sm font-semibold text-[#1A1A1A]">
+                            {cat.name}
+                          </span>
+                          {hasSubsSelected && (
+                            <p className="text-xs text-[#6B6B6B]">
+                              Via sous-catégorie(s) sélectionnée(s)
+                            </p>
+                          )}
+                        </div>
+                      </label>
+
+                      {catSubs.length > 0 && (
+                        <div className="px-4 py-3 space-y-2 bg-white">
+                          <p className="text-xs font-medium text-[#6B6B6B] uppercase tracking-wide">
+                            Sous-catégories
+                          </p>
+                          {catSubs.map((sub) => {
+                            const link = selectedSubs.find(
+                              (s) => s.subcategory_id === sub.id
+                            );
+                            const isSubSelected = !!link;
+
+                            return (
+                              <div
+                                key={sub.id}
+                                className={cn(
+                                  "flex items-center gap-3 p-3 rounded-lg border transition-all",
+                                  isSubSelected
+                                    ? "border-[#F5A623] bg-[#F5A623]/5"
+                                    : "border-[#E5E5E5] hover:border-[#F5A623]/30"
+                                )}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSubSelected}
+                                  onChange={() => toggleSubcategory(sub)}
+                                  className="accent-[#F5A623]"
+                                />
+                                <span className="flex-1 text-sm text-[#1A1A1A]">
+                                  {sub.name}
+                                </span>
+                                {isSubSelected && (
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-[#6B6B6B]">
+                                      Ordre
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      value={link.order}
+                                      onChange={(e) =>
+                                        updateSubOrder(
+                                          sub.id,
+                                          parseInt(e.target.value, 10) || 1
+                                        )
+                                      }
+                                      className="w-16 px-2 py-1 text-sm rounded border border-[#E5E5E5] focus:outline-none focus:ring-1 focus:ring-[#F5A623]/30"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

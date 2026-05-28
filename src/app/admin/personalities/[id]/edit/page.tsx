@@ -24,20 +24,46 @@ export default async function EditPersonalityPage({
     notFound();
   }
 
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("*")
-    .order("order");
+  const [{ data: categories }, { data: subcategories }] = await Promise.all([
+    supabase.from("categories").select("*").order("order"),
+    supabase.from("subcategories").select("*").order("order"),
+  ]);
 
   let linkedCategoryIds: string[] = [];
+  let linkedSubcategories: { subcategory_id: string; order: number }[] = [];
+
   try {
-    const { data: links } = await supabase
-      .from("personality_categories")
-      .select("category_id")
-      .eq("personality_id", id);
-    linkedCategoryIds = links?.map((l) => l.category_id) || [];
+    const [{ data: catLinks }, { data: subLinks }] = await Promise.all([
+      supabase
+        .from("personality_categories")
+        .select("category_id")
+        .eq("personality_id", id),
+      supabase
+        .from("personality_subcategories")
+        .select("subcategory_id, order")
+        .eq("personality_id", id),
+    ]);
+
+    const subCatParentIds = new Set(
+      (subLinks ?? [])
+        .map((l) =>
+          subcategories?.find((s) => s.id === l.subcategory_id)?.category_id
+        )
+        .filter(Boolean)
+    );
+
+    linkedCategoryIds =
+      catLinks
+        ?.map((l) => l.category_id)
+        .filter((catId) => !subCatParentIds.has(catId)) || [];
+
+    linkedSubcategories =
+      subLinks?.map((l) => ({
+        subcategory_id: l.subcategory_id,
+        order: l.order,
+      })) || [];
   } catch {
-    // table peut ne pas exister
+    // tables peuvent ne pas exister avant migration
   }
 
   let timelineEvents: Array<{
@@ -66,7 +92,9 @@ export default async function EditPersonalityPage({
       <PersonalityForm
         personality={personality}
         categories={categories || []}
+        subcategories={subcategories || []}
         linkedCategoryIds={linkedCategoryIds}
+        linkedSubcategories={linkedSubcategories}
         timelineEvents={timelineEvents}
         mode="edit"
       />

@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-import type { Category } from "@/types/database.types";
+import type { Category, Subcategory } from "@/types/database.types";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Landmark,
@@ -46,19 +46,29 @@ export default function Header() {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const dropdownTimeout = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => {
     const supabase = createClient();
-    supabase
-      .from("categories")
-      .select("*")
-      .order("order", { ascending: true })
-      .then(({ data }) => {
-        if (data) setCategories(data);
-      });
+    Promise.all([
+      supabase.from("categories").select("*").order("order", { ascending: true }),
+      supabase.from("subcategories").select("*").order("order", { ascending: true }),
+    ]).then(([catsRes, subsRes]) => {
+      if (catsRes.data) setCategories(catsRes.data);
+      if (subsRes.data) setSubcategories(subsRes.data);
+    });
   }, []);
+
+  const subsByCategory = subcategories.reduce<Record<string, Subcategory[]>>(
+    (acc, sub) => {
+      if (!acc[sub.category_id]) acc[sub.category_id] = [];
+      acc[sub.category_id].push(sub);
+      return acc;
+    },
+    {}
+  );
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -87,8 +97,12 @@ export default function Header() {
     return pathname.startsWith(href);
   };
 
-  const isCategoryActive = categories.some((c) =>
-    pathname.startsWith(`/categories/${c.slug}`),
+  const isCategoryActive = categories.some(
+    (c) =>
+      pathname.startsWith(`/categories/${c.slug}`) ||
+      (subsByCategory[c.id] ?? []).some((s) =>
+        pathname.startsWith(`/categories/${c.slug}/${s.slug}`)
+      )
   );
 
   const openDropdown = () => {
@@ -180,7 +194,7 @@ export default function Header() {
 
                 <div
                   className={cn(
-                    "absolute right-0 top-full z-50 mt-3 w-80 rounded-2xl border border-gris-bordure/60 bg-blanc p-2 shadow-2xl shadow-black/[0.08] transition-all duration-200",
+                    "absolute right-0 top-full z-50 mt-3 w-96 max-h-[70vh] overflow-y-auto rounded-2xl border border-gris-bordure/60 bg-blanc p-2 shadow-2xl shadow-black/[0.08] transition-all duration-200",
                     categoriesOpen
                       ? "visible translate-y-0 opacity-100"
                       : "invisible -translate-y-3 opacity-0",
@@ -190,30 +204,54 @@ export default function Header() {
                   <p className="px-3 pt-2 pb-2.5 text-[11px] font-semibold tracking-widest uppercase text-gris-moyen/60">
                     Explorer par catégorie
                   </p>
-                  <div className="flex flex-col gap-0.5">
+                  <div className="flex flex-col gap-1">
                     {categories.map((cat) => {
                       const Icon = iconMap[cat.icon] || Users;
+                      const catSubs = subsByCategory[cat.id] || [];
+                      const isCatPath = pathname.startsWith(`/categories/${cat.slug}`);
+
                       return (
-                        <Link
-                          key={cat.slug}
-                          href={`/categories/${cat.slug}`}
-                          className={cn(
-                            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150",
-                            pathname === `/categories/${cat.slug}`
-                              ? "bg-primary/10 text-primary font-medium"
-                              : "text-noir/80 hover:bg-gris-clair hover:text-noir",
+                        <div key={cat.slug}>
+                          <Link
+                            href={`/categories/${cat.slug}`}
+                            className={cn(
+                              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150",
+                              pathname === `/categories/${cat.slug}`
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "text-noir/80 hover:bg-gris-clair hover:text-noir",
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+                                isCatPath
+                                  ? "bg-primary/15 text-primary"
+                                  : "bg-gris-clair text-gris-moyen",
+                              )}
+                            >
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            {cat.name}
+                          </Link>
+                          {catSubs.length > 0 && (
+                            <div className="ml-11 mb-1 flex flex-col gap-0.5">
+                              {catSubs.map((sub) => (
+                                <Link
+                                  key={sub.slug}
+                                  href={`/categories/${cat.slug}/${sub.slug}`}
+                                  className={cn(
+                                    "rounded-lg px-3 py-1.5 text-xs transition-colors",
+                                    pathname === `/categories/${cat.slug}/${sub.slug}`
+                                      ? "text-primary font-medium bg-primary/5"
+                                      : "text-gris-moyen hover:text-noir hover:bg-gris-clair",
+                                  )}
+                                >
+                                  {sub.name}
+                                </Link>
+                              ))}
+                            </div>
                           )}
-                        >
-                          <div className={cn(
-                            "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
-                            pathname === `/categories/${cat.slug}`
-                              ? "bg-primary/15 text-primary"
-                              : "bg-gris-clair text-gris-moyen",
-                          )}>
-                            <Icon className="h-4 w-4" />
-                          </div>
-                          {cat.name}
-                        </Link>
+                        </div>
                       );
                     })}
                   </div>
@@ -337,23 +375,39 @@ export default function Header() {
                     mobileCategoriesOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0",
                   )}
                 >
-                  <div className="ml-3 flex flex-col gap-0.5 border-l-2 border-primary/20 pl-4 py-1">
+                  <div className="ml-3 flex flex-col gap-1 border-l-2 border-primary/20 pl-4 py-1">
                     {categories.map((cat) => {
                       const Icon = iconMap[cat.icon] || Users;
+                      const catSubs = subsByCategory[cat.id] || [];
                       return (
-                        <Link
-                          key={cat.slug}
-                          href={`/categories/${cat.slug}`}
-                          className={cn(
-                            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                            pathname === `/categories/${cat.slug}`
-                              ? "text-primary font-medium"
-                              : "text-gris-moyen hover:text-noir",
-                          )}
-                        >
-                          <Icon className="h-4 w-4 shrink-0" />
-                          {cat.name}
-                        </Link>
+                        <div key={cat.slug}>
+                          <Link
+                            href={`/categories/${cat.slug}`}
+                            className={cn(
+                              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                              pathname === `/categories/${cat.slug}`
+                                ? "text-primary font-medium"
+                                : "text-gris-moyen hover:text-noir",
+                            )}
+                          >
+                            <Icon className="h-4 w-4 shrink-0" />
+                            {cat.name}
+                          </Link>
+                          {catSubs.map((sub) => (
+                            <Link
+                              key={sub.slug}
+                              href={`/categories/${cat.slug}/${sub.slug}`}
+                              className={cn(
+                                "block rounded-lg px-3 py-2 ml-7 text-sm transition-colors",
+                                pathname === `/categories/${cat.slug}/${sub.slug}`
+                                  ? "text-primary font-medium"
+                                  : "text-gris-moyen hover:text-noir",
+                              )}
+                            >
+                              {sub.name}
+                            </Link>
+                          ))}
+                        </div>
                       );
                     })}
                   </div>

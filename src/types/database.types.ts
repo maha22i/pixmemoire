@@ -57,6 +57,7 @@ export interface Personality {
   video_urls: VideoEntry[];
   sources: SourceEntry[];
   featured: boolean;
+  featured_order: number;
   views_count: number;
   status: PersonalityStatus;
   ai_generated?: boolean;
@@ -77,9 +78,36 @@ export interface Category {
   order: number;
 }
 
+export interface Subcategory {
+  id: string;
+  category_id: string;
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  order: number;
+  featured: boolean;
+}
+
+export interface SubcategoryWithCategory extends Subcategory {
+  category: Category;
+}
+
 export interface PersonalityCategory {
   personality_id: string;
   category_id: string;
+}
+
+export interface PersonalitySubcategory {
+  personality_id: string;
+  subcategory_id: string;
+  order: number;
+}
+
+export interface PersonalitySubcategoryLink {
+  subcategory_id: string;
+  order: number;
 }
 
 export interface TimelineEvent {
@@ -118,6 +146,7 @@ export interface PageView {
 
 export interface PersonalityWithCategories extends Personality {
   categories: Category[];
+  subcategories?: Subcategory[];
 }
 
 export interface FilterState {

@@ -1,62 +1,19 @@
 import Link from "next/link";
-import {
-  Landmark,
-  Palette,
-  Trophy,
-  BookOpen,
-  Heart,
-  Briefcase,
-  GraduationCap,
-  Users,
-  ArrowRight,
-  Sparkles,
-} from "lucide-react";
+import { Heart, Users, ArrowRight, Sparkles } from "lucide-react";
 import { PersonalityCard } from "@/components/personality/PersonalityCard";
 import { HeroSection } from "@/components/home/HeroSection";
 import { AnimatedReveal } from "@/components/common/AnimatedReveal";
+import { FeaturedSubcategoriesSection } from "@/components/home/FeaturedSubcategoriesSection";
 import {
   getAllPersonalities,
   getFeaturedPersonalities,
   getRecentPersonalities,
 } from "@/lib/supabase/queries";
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Landmark,
-  Palette,
-  Trophy,
-  BookOpen,
-  Heart,
-  Briefcase,
-  GraduationCap,
-  Users,
-};
-
-function CategoryIcon({
-  iconName,
-  className,
-}: {
-  iconName: string;
-  className?: string;
-}) {
-  const Icon = iconMap[iconName];
-  if (!Icon) return null;
-  return <Icon className={className} />;
-}
-
 export default async function Home() {
   const allPersonalities = await getAllPersonalities();
-  const featured = await getFeaturedPersonalities();
+  const displayFeatured = await getFeaturedPersonalities(6);
   const recent = await getRecentPersonalities(4);
-
-  const displayFeatured =
-    featured.length >= 6
-      ? featured.slice(0, 6)
-      : [
-          ...featured,
-          ...allPersonalities
-            .filter((p) => !featured.some((f) => f.id === p.id))
-            .slice(0, 6 - featured.length),
-        ];
 
   const hasPersonalities = allPersonalities.length > 0;
 
@@ -64,7 +21,7 @@ export default async function Home() {
     <>
       <HeroSection personalityCount={allPersonalities.length} />
 
-      {/* Featured */}
+      {/* À la une — personnalités choisies dans Admin → À la une */}
       {displayFeatured.length > 0 && (
         <section className="relative py-12 md:py-12 bg-noir overflow-hidden">
           <div className="absolute inset-0 opacity-30">
@@ -76,13 +33,16 @@ export default async function Home() {
             <AnimatedReveal className="text-center mb-14">
               <div className="inline-flex items-center gap-2 text-primary mb-3">
                 <Sparkles className="h-4 w-4" />
-                <span className="text-sm font-medium tracking-widest uppercase">À la une</span>
+                <span className="text-sm font-medium tracking-widest uppercase">
+                  À la une
+                </span>
               </div>
               <h2 className="font-serif text-3xl md:text-4xl font-bold text-blanc">
                 Personnalités emblématiques
               </h2>
               <p className="text-gray-400 mt-3 max-w-xl mx-auto">
-                Les figures qui ont marqué l&apos;histoire et la culture de Djibouti.
+                Les figures qui ont marqué l&apos;histoire et la culture de
+                Djibouti.
               </p>
             </AnimatedReveal>
 
@@ -91,7 +51,9 @@ export default async function Home() {
                 <AnimatedReveal key={personality.id} delay={i * 0.08}>
                   <PersonalityCard
                     personality={personality}
-                    categories={"categories" in personality ? personality.categories : []}
+                    categories={
+                      "categories" in personality ? personality.categories : []
+                    }
                     variant="dark"
                   />
                 </AnimatedReveal>
@@ -101,9 +63,12 @@ export default async function Home() {
         </section>
       )}
 
-      {/* Recent */}
+      {/* À découvrir — sous-catégories mises en avant dans Admin → Catégories */}
+      <FeaturedSubcategoriesSection />
+
+      {/* Récemment ajoutées */}
       {recent.length > 0 && (
-        <section className="py-20 md:py-28 bg-gris-clair">
+        <section className="py-10 md:py-16 bg-gris-clair">
           <div className="mx-auto max-w-6xl px-4">
             <AnimatedReveal>
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-12">
@@ -130,7 +95,9 @@ export default async function Home() {
                 <AnimatedReveal key={personality.id} delay={i * 0.08}>
                   <PersonalityCard
                     personality={personality}
-                    categories={"categories" in personality ? personality.categories : []}
+                    categories={
+                      "categories" in personality ? personality.categories : []
+                    }
                   />
                 </AnimatedReveal>
               ))}
@@ -139,7 +106,6 @@ export default async function Home() {
         </section>
       )}
 
-      {/* Empty state when no personalities */}
       {!hasPersonalities && (
         <section className="py-20 md:py-28 bg-gris-clair">
           <div className="mx-auto max-w-3xl px-4 text-center">
@@ -150,8 +116,9 @@ export default async function Home() {
               L&apos;annuaire est en construction
             </h2>
             <p className="text-gris-moyen text-lg leading-relaxed">
-              Les personnalités djiboutiennes seront bientôt ajoutées par notre équipe éditoriale.
-              Revenez bientôt pour découvrir les figures qui ont façonné notre nation.
+              Les personnalités djiboutiennes seront bientôt ajoutées par notre
+              équipe éditoriale. Revenez bientôt pour découvrir les figures qui
+              ont façonné notre nation.
             </p>
           </div>
         </section>
@@ -165,10 +132,13 @@ export default async function Home() {
           <div className="absolute top-1/2 left-0 w-[300px] h-[300px] rounded-full bg-accent-blue/[0.06] blur-[80px]" />
         </div>
 
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)`,
-          backgroundSize: "32px 32px",
-        }} />
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: `radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)`,
+            backgroundSize: "32px 32px",
+          }}
+        />
 
         <div className="relative mx-auto max-w-4xl px-4">
           <AnimatedReveal>
@@ -186,8 +156,8 @@ export default async function Home() {
               </h2>
 
               <p className="text-gray-400 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto mb-12">
-                Vous connaissez une personnalité djiboutienne qui mérite d&apos;être
-                reconnue ? Aidez-nous à préserver notre patrimoine.
+                Vous connaissez une personnalité djiboutienne qui mérite
+                d&apos;être reconnue ? Aidez-nous à préserver notre patrimoine.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

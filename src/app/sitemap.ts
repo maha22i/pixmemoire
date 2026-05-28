@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import {
   getPublishedPersonalitiesForSitemap,
   getAllCategories,
+  getSubcategoriesForSitemap,
 } from "@/lib/supabase/queries";
 
 const BASE_URL =
@@ -49,9 +50,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const [personalities, categories] = await Promise.all([
+  const [personalities, categories, subcategories] = await Promise.all([
     getPublishedPersonalitiesForSitemap(),
     getAllCategories(),
+    getSubcategoriesForSitemap(),
   ]);
 
   const personalityPages: MetadataRoute.Sitemap = personalities.map((p) => ({
@@ -68,5 +70,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...staticPages, ...personalityPages, ...categoryPages];
+  const subcategoryPages: MetadataRoute.Sitemap = subcategories.map((s) => ({
+    url: `${BASE_URL}/categories/${s.category_slug}/${s.slug}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.65,
+  }));
+
+  return [...staticPages, ...personalityPages, ...categoryPages, ...subcategoryPages];
 }

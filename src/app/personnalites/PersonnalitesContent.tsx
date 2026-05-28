@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { matchesPersonalityNameSearch } from "@/lib/utils/personality-search";
 import type {
   Category,
   FilterState,
@@ -69,13 +70,8 @@ export function PersonnalitesContent({
     let result = [...initialPersonalities];
 
     if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.full_name.toLowerCase().includes(q) ||
-          p.display_name.toLowerCase().includes(q) ||
-          p.title.toLowerCase().includes(q) ||
-          p.short_bio.toLowerCase().includes(q)
+      result = result.filter((p) =>
+        matchesPersonalityNameSearch(p.full_name, p.display_name, searchQuery)
       );
     }
 
