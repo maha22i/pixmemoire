@@ -11,6 +11,11 @@ import { PersonalityHero } from "@/components/personality/PersonalityHero";
 import { PersonalityCard } from "@/components/personality/PersonalityCard";
 import { ProfileTabs } from "@/components/personality/ProfileTabs";
 import { ReportErrorModal } from "@/components/personality/ReportErrorModal";
+import { PersonJsonLd } from "@/components/seo/PersonJsonLd";
+import { BreadcrumbJsonLd } from "@/components/seo/BreadcrumbJsonLd";
+
+const BASE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pixmemoire.dj";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -26,16 +31,59 @@ export async function generateMetadata({
     return { title: "Personnalité non trouvée" };
   }
 
+  const dates = [
+    personality.birth_date,
+    personality.death_date || "présent",
+  ]
+    .filter(Boolean)
+    .join("–");
+
+  const description = `Biographie de ${personality.full_name}${dates ? ` (${dates})` : ""}. ${personality.title}. Découvrez son parcours et sa contribution à l'histoire de Djibouti.`;
+
   return {
     title: `${personality.full_name} — ${personality.title}`,
-    description: personality.short_bio,
+    description,
+    keywords: [
+      personality.full_name,
+      `${personality.full_name} biographie`,
+      `${personality.full_name} Djibouti`,
+      personality.title,
+      "personnalité djiboutienne",
+      "histoire Djibouti",
+    ],
     openGraph: {
+      type: "profile",
+      title: `${personality.full_name} | PixMémoire`,
+      description: personality.short_bio,
+      url: `${BASE_URL}/personnalites/${slug}`,
+      images: personality.main_photo_url
+        ? [
+            {
+              url: personality.main_photo_url,
+              width: 1200,
+              height: 630,
+              alt: `Portrait de ${personality.full_name}`,
+            },
+          ]
+        : [
+            {
+              url: "/images/og-default.jpg",
+              width: 1200,
+              height: 630,
+              alt: `${personality.full_name} — PixMémoire`,
+            },
+          ],
+    },
+    twitter: {
+      card: "summary_large_image",
       title: `${personality.full_name} — ${personality.title}`,
       description: personality.short_bio,
       images: personality.main_photo_url
-        ? [{ url: personality.main_photo_url }]
-        : [],
-      type: "profile",
+        ? [personality.main_photo_url]
+        : ["/images/og-default.jpg"],
+    },
+    alternates: {
+      canonical: `${BASE_URL}/personnalites/${slug}`,
     },
   };
 }
@@ -54,27 +102,35 @@ export default async function PersonnalitePage({ params }: PageProps) {
     getRelatedPersonalities(personality.id),
   ]);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Person",
-    name: personality.full_name,
-    jobTitle: personality.title,
-    description: personality.short_bio,
-    birthDate: personality.birth_date,
-    ...(personality.death_date && { deathDate: personality.death_date }),
-    birthPlace: {
-      "@type": "Place",
-      name: personality.birth_place,
-    },
-    image: personality.main_photo_url,
-    url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://pixmemoire.dj"}/personnalites/${personality.slug}`,
-  };
+  const primaryCategory = categories[0];
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      <PersonJsonLd
+        person={personality}
+        categories={categories}
+        timelineEvents={timelineEvents}
+      />
+      <BreadcrumbJsonLd
+        items={[
+          { label: "PixMémoire", url: BASE_URL },
+          {
+            label: "Personnalités",
+            url: `${BASE_URL}/personnalites`,
+          },
+          ...(primaryCategory
+            ? [
+                {
+                  label: primaryCategory.name,
+                  url: `${BASE_URL}/categories/${primaryCategory.slug}`,
+                },
+              ]
+            : []),
+          {
+            label: personality.full_name,
+            url: `${BASE_URL}/personnalites/${personality.slug}`,
+          },
+        ]}
       />
 
       <article>

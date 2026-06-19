@@ -41,10 +41,29 @@ import {
   getCategoryCount,
 } from "@/lib/supabase/queries";
 
+const BASE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pixmemoire.dj";
+
 export const metadata: Metadata = {
-  title: "À propos",
+  title: "À propos — Qui sommes-nous",
   description:
-    "Découvrez PixMémoire, le premier annuaire en ligne des personnalités djiboutiennes. Un projet éditorial de Pixel Nomade.",
+    "PixMémoire est le premier répertoire numérique des personnalités djiboutiennes. Un projet éditorial de Pixel Nomade, agence agréée par le Ministère de la Communication de Djibouti.",
+  keywords: [
+    "PixMémoire",
+    "Pixel Nomade",
+    "agence Djibouti",
+    "répertoire personnalités djiboutiennes",
+    "patrimoine numérique Djibouti",
+  ],
+  openGraph: {
+    title: "À propos de PixMémoire | Mémoire vivante de Djibouti",
+    description:
+      "PixMémoire est le premier répertoire numérique des personnalités djiboutiennes. Porté par Pixel Nomade.",
+    url: `${BASE_URL}/a-propos`,
+  },
+  alternates: {
+    canonical: `${BASE_URL}/a-propos`,
+  },
 };
 
 const stats = [

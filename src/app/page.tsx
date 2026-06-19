@@ -4,6 +4,7 @@ import { PersonalityCard } from "@/components/personality/PersonalityCard";
 import { HeroSection } from "@/components/home/HeroSection";
 import { AnimatedReveal } from "@/components/common/AnimatedReveal";
 import { FeaturedSubcategoriesSection } from "@/components/home/FeaturedSubcategoriesSection";
+import { SiteJsonLd } from "@/components/seo/SiteJsonLd";
 import {
   getAllPersonalities,
   getFeaturedPersonalities,
@@ -19,6 +20,7 @@ export default async function Home() {
 
   return (
     <>
+      <SiteJsonLd />
       <HeroSection personalityCount={allPersonalities.length} />
 
       {/* À la une — personnalités choisies dans Admin → À la une */}

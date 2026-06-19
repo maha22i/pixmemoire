@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Menu,
@@ -127,9 +128,13 @@ export default function Header() {
         <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center px-4 lg:px-8">
           {/* Logo */}
           <Link href="/" className="group flex shrink-0 items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/20">
-              <span className="font-serif text-lg font-bold text-primary">P</span>
-            </div>
+            <Image
+              src="/images/logo-pixel.jpeg"
+              alt="Pixel Nomade"
+              width={56}
+              height={56}
+              className="h-14 w-14 shrink-0 rounded-xl object-cover transition-opacity group-hover:opacity-90"
+            />
             <div className="flex flex-col leading-tight">
               <span className="font-serif text-lg font-bold text-noir tracking-tight">
                 Pix<span className="text-primary">.</span>Mémoire

@@ -17,51 +17,74 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+    process.env.NEXT_PUBLIC_SITE_URL || "https://pixmemoire.dj"
   ),
   title: {
-    default: "PixMémoire — La mémoire vivante de Djibouti",
-    template: "%s | PixMémoire",
+    template: "%s | PixMémoire — Mémoire vivante de Djibouti",
+    default: "PixMémoire — Répertoire des personnalités djiboutiennes",
   },
   description:
-    "Découvrez les femmes et les hommes qui ont façonné Djibouti. Un annuaire des personnalités djiboutiennes — politiques, artistes, sportifs, historiens et plus encore.",
+    "PixMémoire est le premier répertoire numérique des personnalités qui ont marqué l'histoire de Djibouti. Figures politiques, culturelles, sportives et intellectuelles.",
   keywords: [
     "Djibouti",
-    "personnalités",
-    "annuaire",
-    "biographies",
-    "histoire",
+    "personnalités djiboutiennes",
+    "histoire de Djibouti",
+    "figures politiques Djibouti",
+    "indépendance Djibouti",
+    "mémoire Djibouti",
+    "patrimoine djiboutien",
+    "biographies Djibouti",
     "culture djiboutienne",
-    "Pixel Nomade",
+    "personnalités africaines",
   ],
   authors: [{ name: "Pixel Nomade", url: "https://pixel-nomade.com" }],
-  creator: "Pixel Nomade",
+  creator: "Pixel Nomade — Agence de communication multimédia, Djibouti",
+  publisher: "PixMémoire by Pixel Nomade",
   openGraph: {
     type: "website",
-    locale: "fr_FR",
-    url: "/",
+    locale: "fr_DJ",
+    url: "https://pixmemoire.dj",
     siteName: "PixMémoire",
-    title: "PixMémoire — La mémoire vivante de Djibouti",
+    title: "PixMémoire — Répertoire des personnalités djiboutiennes",
     description:
-      "Découvrez les femmes et les hommes qui ont façonné Djibouti.",
+      "Le premier répertoire numérique des personnalités qui ont fait l'histoire de Djibouti.",
     images: [
       {
         url: "/images/og-default.jpg",
         width: 1200,
         height: 630,
-        alt: "PixMémoire — La mémoire vivante de Djibouti",
+        alt: "PixMémoire — Mémoire vivante de Djibouti",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "PixMémoire — La mémoire vivante de Djibouti",
+    title: "PixMémoire — Répertoire des personnalités djiboutiennes",
     description:
-      "Découvrez les femmes et les hommes qui ont façonné Djibouti.",
+      "Le premier répertoire numérique des personnalités djiboutiennes.",
+    images: ["/images/og-default.jpg"],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  alternates: {
+    canonical: "https://pixmemoire.dj",
+  },
+  icons: {
+    icon: "/images/logo-pixel.ico",
+    shortcut: "/images/logo-pixel.ico",
+    apple: "/images/logo-pixel.ico",
+  },
+  verification: {
+    google: "google706852c95ea96bcf",
   },
 };
 

@@ -2,8 +2,8 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { SlidersHorizontal, X, Users } from "lucide-react";
-import { cn } from "@/lib/utils";
+import Image from "next/image";
+import { SlidersHorizontal, X, Users, Sparkles } from "lucide-react";
 import { matchesPersonalityNameSearch } from "@/lib/utils/personality-search";
 import type {
   Category,
@@ -14,6 +14,7 @@ import { PersonalityCard } from "@/components/personality/PersonalityCard";
 import { SearchBar } from "@/components/search/SearchBar";
 import { FilterSidebar } from "@/components/search/FilterSidebar";
 import { Breadcrumbs } from "@/components/common/Breadcrumbs";
+import { AnimatedReveal } from "@/components/common/AnimatedReveal";
 import { EmptyState } from "@/components/common/EmptyState";
 
 const ITEMS_PER_PAGE = 12;
@@ -193,128 +194,153 @@ export function PersonnalitesContent({
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      {/* Header */}
-      <div className="space-y-4 mb-8">
-        <Breadcrumbs
-          items={[
-            { label: "Accueil", href: "/" },
-            { label: "Personnalités" },
-          ]}
+    <div className="overflow-hidden">
+      {/* Hero Header */}
+      <section className="relative min-h-[40vh] flex items-end overflow-hidden">
+        <Image
+          src="/images/page-personnalite.jpeg"
+          alt=""
+          fill
+          priority
+          className="object-cover"
         />
-
-        <div className="space-y-2">
-          <h1 className="font-serif text-4xl font-bold text-noir">
-            Personnalités
-          </h1>
-          <p className="text-gris-moyen">
-            Explorez l&apos;annuaire des personnalités djiboutiennes
-          </p>
+        <div className="absolute inset-0 bg-blanc/40 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-[15%] right-[8%] w-72 h-72 rounded-full bg-primary/15 blur-3xl" />
+          <div className="absolute bottom-[20%] left-[5%] w-64 h-64 rounded-full bg-accent-teal/10 blur-3xl" />
         </div>
 
-        <SearchBar
-          placeholder="Rechercher une personnalité..."
-          value={searchQuery}
-          onChange={setSearchQuery}
-          className="max-w-2xl"
-        />
-      </div>
+        <div className="relative mx-auto max-w-7xl w-full px-4 pt-24 pb-14 lg:px-8">
+          <Breadcrumbs
+            items={[
+              { label: "Accueil", href: "/" },
+              { label: "Personnalités" },
+            ]}
+          />
 
-      {/* Main layout */}
-      <div className="flex gap-8">
-        {/* Desktop sidebar */}
-        <div className="hidden lg:block w-72 shrink-0">
-          <div className="sticky top-20">
-            <FilterSidebar
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              onReset={resetFilters}
-              sections={filterSections}
-              className="!block !w-full"
-            />
-          </div>
-        </div>
-
-        {/* Results */}
-        <div className="flex-1 min-w-0">
-          {/* Top bar */}
-          <div className="flex items-center justify-between mb-6 gap-4">
-            <div className="flex items-center gap-3">
-              {/* Mobile filter button */}
-              <button
-                onClick={() => setMobileFiltersOpen(true)}
-                className="lg:hidden flex items-center gap-2 rounded-lg border border-gris-bordure px-3 py-2 text-sm text-noir hover:border-primary transition-colors"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                <span>Filtres</span>
-                {activeFilterCount > 0 && (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-
-              <p className="text-sm text-gris-moyen">
-                <span className="font-semibold text-noir">
-                  {filteredPersonalities.length}
-                </span>{" "}
-                personnalité{filteredPersonalities.length !== 1 ? "s" : ""}{" "}
-                trouvée{filteredPersonalities.length !== 1 ? "s" : ""}
+          <AnimatedReveal className="mt-8 max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 mb-4">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <p className="text-sm font-medium text-primary tracking-widest uppercase">
+                Annuaire
               </p>
             </div>
+            <h1 className="font-serif text-4xl md:text-5xl font-bold text-noir leading-tight">
+              Personnalités<span className="gradient-text">.</span>
+            </h1>
+            <p className="mt-4 text-lg md:text-xl leading-relaxed text-gris-moyen max-w-2xl">
+              Explorez l&apos;annuaire des personnalités djiboutiennes qui ont
+              marqué l&apos;histoire et façonné notre nation.
+            </p>
+          </AnimatedReveal>
 
-            <select
-              value={filters.sortBy || "alpha-asc"}
-              onChange={(e) =>
-                handleFilterChange({ ...filters, sortBy: e.target.value })
-              }
-              className="rounded-lg border border-gris-bordure bg-blanc px-3 py-2 text-sm text-noir focus:border-primary focus:outline-none"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+          <AnimatedReveal delay={0.15} className="mt-6 max-w-2xl">
+            <SearchBar
+              placeholder="Rechercher une personnalité..."
+              value={searchQuery}
+              onChange={setSearchQuery}
+            />
+          </AnimatedReveal>
+        </div>
+      </section>
+
+      {/* Main content */}
+      <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
+        <div className="flex gap-8">
+          {/* Desktop sidebar */}
+          <div className="hidden lg:block w-72 shrink-0">
+            <div className="sticky top-20">
+              <FilterSidebar
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onReset={resetFilters}
+                sections={filterSections}
+                className="!block !w-full"
+              />
+            </div>
           </div>
 
-          {/* Grid */}
-          {visiblePersonalities.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {visiblePersonalities.map((p) => (
-                  <PersonalityCard
-                    key={p.id}
-                    personality={p}
-                    categories={p.categories}
-                  />
-                ))}
+          {/* Results */}
+          <div className="flex-1 min-w-0">
+            {/* Top bar */}
+            <div className="flex items-center justify-between mb-6 gap-4">
+              <div className="flex items-center gap-3">
+                {/* Mobile filter button */}
+                <button
+                  onClick={() => setMobileFiltersOpen(true)}
+                  className="lg:hidden inline-flex items-center gap-2 rounded-xl border border-gris-bordure bg-blanc px-3.5 py-2.5 text-sm font-medium text-noir hover:border-primary hover:text-primary transition-all shadow-sm"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  <span>Filtres</span>
+                  {activeFilterCount > 0 && (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+
+                <p className="text-sm text-gris-moyen">
+                  <span className="font-semibold text-noir">
+                    {filteredPersonalities.length}
+                  </span>{" "}
+                  personnalité{filteredPersonalities.length !== 1 ? "s" : ""}{" "}
+                  trouvée{filteredPersonalities.length !== 1 ? "s" : ""}
+                </p>
               </div>
 
-              {hasMore && (
-                <div className="mt-10 flex justify-center">
-                  <button
-                    onClick={() =>
-                      setVisibleCount((prev) => prev + ITEMS_PER_PAGE)
-                    }
-                    className="rounded-lg border border-gris-bordure px-8 py-3 text-sm font-medium text-noir hover:border-primary hover:text-primary transition-colors"
-                  >
-                    Voir plus
-                  </button>
+              <select
+                value={filters.sortBy || "alpha-asc"}
+                onChange={(e) =>
+                  handleFilterChange({ ...filters, sortBy: e.target.value })
+                }
+                className="rounded-xl border border-gris-bordure bg-blanc px-4 py-2.5 text-sm text-noir shadow-sm focus:border-primary focus:ring-1 focus:ring-primary/20 focus:outline-none transition-all"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Grid */}
+            {visiblePersonalities.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {visiblePersonalities.map((p) => (
+                    <PersonalityCard
+                      key={p.id}
+                      personality={p}
+                      categories={p.categories}
+                    />
+                  ))}
                 </div>
-              )}
-            </>
-          ) : (
-            <EmptyState
-              title="Aucune personnalité trouvée"
-              description="Aucun résultat ne correspond à vos critères de recherche. Essayez de modifier vos filtres ou votre recherche."
-              icon={Users}
-              action={{
-                label: "Réinitialiser les filtres",
-                onClick: resetFilters,
-              }}
-            />
-          )}
+
+                {hasMore && (
+                  <div className="mt-10 flex justify-center">
+                    <button
+                      onClick={() =>
+                        setVisibleCount((prev) => prev + ITEMS_PER_PAGE)
+                      }
+                      className="rounded-xl border border-gris-bordure bg-blanc px-8 py-3 text-sm font-medium text-noir hover:border-primary hover:text-primary transition-all shadow-sm hover:shadow-md"
+                    >
+                      Voir plus
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <EmptyState
+                title="Aucune personnalité trouvée"
+                description="Aucun résultat ne correspond à vos critères de recherche. Essayez de modifier vos filtres ou votre recherche."
+                icon={Users}
+                action={{
+                  label: "Réinitialiser les filtres",
+                  onClick: resetFilters,
+                }}
+              />
+            )}
+          </div>
         </div>
       </div>
 
@@ -322,17 +348,17 @@ export function PersonnalitesContent({
       {mobileFiltersOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
-            className="absolute inset-0 bg-noir/50"
+            className="absolute inset-0 bg-noir/40 backdrop-blur-sm"
             onClick={() => setMobileFiltersOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 w-80 max-w-[85vw] overflow-y-auto bg-blanc p-6 shadow-xl">
+          <div className="absolute inset-y-0 left-0 w-80 max-w-[85vw] overflow-y-auto bg-blanc p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-serif text-lg font-semibold text-noir">
                 Filtres
               </h3>
               <button
                 onClick={() => setMobileFiltersOpen(false)}
-                className="rounded-full p-1.5 hover:bg-gris-clair transition-colors"
+                className="rounded-full p-2 hover:bg-gris-clair transition-colors"
               >
                 <X className="h-5 w-5 text-noir" />
               </button>

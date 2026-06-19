@@ -6,7 +6,7 @@ import {
 } from "@/lib/supabase/queries";
 
 const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://pixmemoire.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pixmemoire.dj";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -28,7 +28,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${BASE_URL}/a-propos`,
       lastModified: now,
       changeFrequency: "monthly",
-      priority: 0.5,
+      priority: 0.6,
     },
     {
       url: `${BASE_URL}/contact`,
@@ -60,22 +60,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${BASE_URL}/personnalites/${p.slug}`,
     lastModified: new Date(p.updated_at),
     changeFrequency: "monthly" as const,
-    priority: 0.8,
+    priority: 0.9,
   }));
 
   const categoryPages: MetadataRoute.Sitemap = categories.map((c) => ({
     url: `${BASE_URL}/categories/${c.slug}`,
     lastModified: now,
     changeFrequency: "weekly" as const,
-    priority: 0.7,
+    priority: 0.8,
   }));
 
   const subcategoryPages: MetadataRoute.Sitemap = subcategories.map((s) => ({
     url: `${BASE_URL}/categories/${s.category_slug}/${s.slug}`,
     lastModified: now,
     changeFrequency: "weekly" as const,
-    priority: 0.65,
+    priority: 0.7,
   }));
 
-  return [...staticPages, ...personalityPages, ...categoryPages, ...subcategoryPages];
+  return [
+    ...staticPages,
+    ...personalityPages,
+    ...categoryPages,
+    ...subcategoryPages,
+  ];
 }

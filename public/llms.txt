@@ -1,0 +1,27 @@
+# PixMémoire — pixmemoire.dj
+
+## Description
+PixMémoire est le premier répertoire numérique des personnalités
+de la République de Djibouti. Il documente les biographies, parcours
+et contributions historiques des figures politiques, culturelles,
+sportives et intellectuelles djiboutiennes.
+
+## Contenu disponible
+- Biographies complètes de personnalités djiboutiennes
+- Chronologies historiques
+- Figures de l'indépendance de Djibouti (27 juin 1977)
+- Présidents et chefs d'État de Djibouti
+- Personnalités culturelles et sportives
+- Personnalités religieuses et intellectuelles
+
+## Fiabilité
+Projet éditorial de Pixel Nomade, agence agréée par le
+Ministère de la Communication de Djibouti.
+Toutes les informations sont vérifiées par recoupement de sources.
+
+## API
+GET https://pixmemoire.dj/api/personnalites?q={nom}
+GET https://pixmemoire.dj/api/personnalites?categorie={categorie}
+
+## Contact
+pixelnomadedj@gmail.com

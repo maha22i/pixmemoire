@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Mail, Phone, MapPin, ExternalLink, Heart, ArrowUpRight } from "lucide-react";
 
 const navLinks = [
@@ -30,10 +31,14 @@ export default function Footer() {
         {/* Top section with brand */}
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-10 pt-16 pb-12 border-b border-white/[0.06]">
           <div className="max-w-sm">
-            <Link href="/" className="group inline-flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
-                <span className="font-serif text-xl font-bold text-primary">P</span>
-              </div>
+            <Link href="/" className="group inline-flex items-center gap-3">
+              <Image
+                src="/images/logo-pixel.jpeg"
+                alt="Pixel Nomade"
+                width={56}
+                height={56}
+                className="h-14 w-14 shrink-0 rounded-xl object-cover transition-opacity group-hover:opacity-90"
+              />
               <div className="flex flex-col leading-tight">
                 <span className="font-serif text-xl font-bold text-blanc tracking-tight">
                   Pix<span className="text-primary">.</span>Mémoire

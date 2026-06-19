@@ -8,6 +8,10 @@ import {
   getSubcategoryBySlug,
   getPersonalitiesBySubcategory,
 } from "@/lib/supabase/queries";
+import { BreadcrumbJsonLd } from "@/components/seo/BreadcrumbJsonLd";
+
+const BASE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pixmemoire.dj";
 
 type Params = Promise<{ slug: string; subslug: string }>;
 
@@ -17,12 +21,31 @@ export async function generateMetadata({
   params: Params;
 }): Promise<Metadata> {
   const { slug, subslug } = await params;
-  const subcategory = await getSubcategoryBySlug(slug, subslug);
-  if (!subcategory) return { title: "Sous-catégorie introuvable" };
+  const [category, subcategory] = await Promise.all([
+    getCategoryBySlug(slug),
+    getSubcategoryBySlug(slug, subslug),
+  ]);
+
+  if (!subcategory || !category) return { title: "Sous-catégorie introuvable" };
 
   return {
-    title: subcategory.name,
-    description: subcategory.description,
+    title: `${subcategory.name} — ${category.name}`,
+    description:
+      subcategory.description ||
+      `Personnalités djiboutiennes dans la sous-catégorie ${subcategory.name} (${category.name}).`,
+    keywords: [
+      `${subcategory.name} Djibouti`,
+      `${category.name} Djibouti`,
+      "personnalités djiboutiennes",
+    ],
+    openGraph: {
+      title: `${subcategory.name} — ${category.name} | PixMémoire`,
+      description: subcategory.description,
+      url: `${BASE_URL}/categories/${slug}/${subslug}`,
+    },
+    alternates: {
+      canonical: `${BASE_URL}/categories/${slug}/${subslug}`,
+    },
   };
 }
 
@@ -43,6 +66,21 @@ export default async function SubcategoryPage({
 
   return (
     <div className="bg-blanc min-h-screen">
+      <BreadcrumbJsonLd
+        items={[
+          { label: "PixMémoire", url: BASE_URL },
+          { label: "Catégories", url: `${BASE_URL}/#categories` },
+          {
+            label: category.name,
+            url: `${BASE_URL}/categories/${slug}`,
+          },
+          {
+            label: subcategory.name,
+            url: `${BASE_URL}/categories/${slug}/${subslug}`,
+          },
+        ]}
+      />
+
       <section className="border-b border-gris-bordure bg-blanc py-12 md:py-16">
         <div className="mx-auto max-w-6xl px-4">
           <Breadcrumbs

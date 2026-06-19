@@ -15,7 +15,6 @@ import {
   FolderTree,
 } from "lucide-react";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
 import ConfirmDialog from "@/components/admin/forms/ConfirmDialog";
 import CategoryModal from "./CategoryModal";
 import SubcategoryModal from "./SubcategoryModal";
@@ -76,29 +75,36 @@ export default function CategoriesManager({
 
   const handleSaveCategory = async (data: Partial<Category>) => {
     try {
-      const supabase = createClient();
+      const response = editingCategory
+        ? await fetch("/api/admin/categories", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: editingCategory.id, ...data }),
+          })
+        : await fetch("/api/admin/categories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
 
-      if (editingCategory) {
-        const { error } = await supabase
-          .from("categories")
-          .update(data)
-          .eq("id", editingCategory.id);
-        if (error) throw error;
-        toast.success("Catégorie modifiée avec succès.");
-      } else {
-        const { error } = await supabase.from("categories").insert({
-          ...data,
-          order: categories.length + 1,
-        });
-        if (error) throw error;
-        toast.success("Catégorie créée avec succès.");
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Erreur lors de la sauvegarde.");
       }
+
+      toast.success(
+        editingCategory
+          ? "Catégorie modifiée avec succès."
+          : "Catégorie créée avec succès."
+      );
 
       setShowCategoryModal(false);
       setEditingCategory(undefined);
       router.refresh();
-    } catch {
-      toast.error("Erreur lors de la sauvegarde.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Erreur lors de la sauvegarde."
+      );
     }
   };
 
@@ -121,16 +127,20 @@ export default function CategoriesManager({
     }
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("categories")
-        .delete()
-        .eq("id", deleteCategoryTarget.id);
-      if (error) throw error;
+      const response = await fetch(
+        `/api/admin/categories?id=${deleteCategoryTarget.id}`,
+        { method: "DELETE" }
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Erreur lors de la suppression.");
+      }
       toast.success("Catégorie supprimée.");
       router.refresh();
-    } catch {
-      toast.error("Erreur lors de la suppression.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Erreur lors de la suppression."
+      );
     }
   };
 
@@ -138,32 +148,49 @@ export default function CategoriesManager({
     if (!subcategoryParentId && !editingSubcategory) return;
 
     try {
-      const supabase = createClient();
       const categoryId = editingSubcategory?.category_id || subcategoryParentId;
       const siblings = subsByCategory[categoryId] || [];
 
-      if (editingSubcategory) {
-        const { error } = await supabase
-          .from("subcategories")
-          .update(data)
-          .eq("id", editingSubcategory.id);
-        if (error) throw error;
-        toast.success("Sous-catégorie modifiée.");
-      } else {
-        const { error } = await supabase.from("subcategories").insert({
-          ...data,
-          category_id: categoryId,
-          order: data.order ?? siblings.length + 1,
-        });
-        if (error) throw error;
-        toast.success("Sous-catégorie créée.");
+      const response = editingSubcategory
+        ? await fetch("/api/admin/subcategories", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: editingSubcategory.id,
+              category_id: categoryId,
+              ...data,
+            }),
+          })
+        : await fetch("/api/admin/subcategories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...data,
+              category_id: categoryId,
+              order: data.order ?? siblings.length + 1,
+            }),
+          });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Erreur lors de la sauvegarde.");
       }
+
+      toast.success(
+        editingSubcategory
+          ? "Sous-catégorie modifiée."
+          : "Sous-catégorie créée."
+      );
 
       setShowSubcategoryModal(false);
       setEditingSubcategory(undefined);
       router.refresh();
-    } catch {
-      toast.error("Erreur lors de la sauvegarde de la sous-catégorie.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de la sauvegarde de la sous-catégorie."
+      );
     }
   };
 
@@ -179,19 +206,23 @@ export default function CategoriesManager({
     }
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("subcategories")
-        .delete()
-        .eq("id", deleteSubcategoryTarget.id);
-      if (error) throw error;
+      const response = await fetch(
+        `/api/admin/subcategories?id=${deleteSubcategoryTarget.id}`,
+        { method: "DELETE" }
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Erreur lors de la suppression.");
+      }
       setSubcategories((prev) =>
         prev.filter((s) => s.id !== deleteSubcategoryTarget.id)
       );
       toast.success("Sous-catégorie supprimée.");
       router.refresh();
-    } catch {
-      toast.error("Erreur lors de la suppression.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Erreur lors de la suppression."
+      );
     }
   };
 
@@ -395,6 +426,7 @@ export default function CategoriesManager({
 
       <CategoryModal
         category={editingCategory}
+        existingCategories={categories}
         open={showCategoryModal}
         onClose={() => {
           setShowCategoryModal(false);

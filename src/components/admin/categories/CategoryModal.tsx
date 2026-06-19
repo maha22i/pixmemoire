@@ -20,6 +20,7 @@ type CategoryFormData = z.infer<typeof categorySchema>;
 
 interface CategoryModalProps {
   category?: Category;
+  existingCategories?: Category[];
   open: boolean;
   onClose: () => void;
   onSave: (data: Partial<Category>) => void;
@@ -44,6 +45,7 @@ const ICON_SUGGESTIONS = [
 
 export default function CategoryModal({
   category,
+  existingCategories = [],
   open,
   onClose,
   onSave,
@@ -82,6 +84,13 @@ export default function CategoryModal({
 
   const name = watch("name");
   const color = watch("color");
+  const slug = watch("slug");
+
+  const slugConflict = slug
+    ? existingCategories.find(
+        (item) => item.slug === slug && item.id !== category?.id
+      )
+    : undefined;
 
   useEffect(() => {
     if (!category && name) {
@@ -132,6 +141,12 @@ export default function CategoryModal({
               {...register("slug")}
               className="w-full px-3 py-2 text-sm rounded-lg border border-[#E5E5E5] bg-[#F8F8F8] focus:outline-none focus:ring-2 focus:ring-[#F5A623]/30 focus:border-[#F5A623]"
             />
+            {slugConflict && (
+              <p className="text-xs text-[#EF4444]">
+                Ce slug est déjà utilisé par « {slugConflict.name} ». Modifiez le
+                slug pour continuer.
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -202,7 +217,7 @@ export default function CategoryModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || Boolean(slugConflict)}
               className="px-4 py-2 text-sm font-medium text-white bg-[#F5A623] rounded-lg hover:bg-[#E09010] transition-colors disabled:opacity-50"
             >
               {category ? "Enregistrer" : "Créer"}

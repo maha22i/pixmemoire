@@ -16,6 +16,11 @@ import { Breadcrumbs } from "@/components/common/Breadcrumbs";
 import { PersonalityCard } from "@/components/personality/PersonalityCard";
 import { EmptyState } from "@/components/common/EmptyState";
 import { getCategoryPageStructure } from "@/lib/supabase/queries";
+import { CategoryJsonLd } from "@/components/seo/CategoryJsonLd";
+import { BreadcrumbJsonLd } from "@/components/seo/BreadcrumbJsonLd";
+
+const BASE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pixmemoire.dj";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Landmark,
@@ -39,9 +44,27 @@ export async function generateMetadata({
   const data = await getCategoryPageStructure(slug);
   if (!data) return { title: "Catégorie introuvable" };
 
+  const totalCount =
+    data.directPersonalities.length +
+    data.subSections.reduce((n, s) => n + s.personalities.length, 0);
+
   return {
-    title: data.category.name,
-    description: data.category.description,
+    title: `${data.category.name} — Personnalités djiboutiennes`,
+    description: `${data.category.description} Découvrez les ${totalCount} personnalités djiboutiennes dans la catégorie ${data.category.name} sur PixMémoire.`,
+    keywords: [
+      `${data.category.name} Djibouti`,
+      "personnalités djiboutiennes",
+      `${data.category.name.toLowerCase()} djiboutien`,
+      "histoire Djibouti",
+    ],
+    openGraph: {
+      title: `${data.category.name} — Personnalités djiboutiennes | PixMémoire`,
+      description: data.category.description,
+      url: `${BASE_URL}/categories/${slug}`,
+    },
+    alternates: {
+      canonical: `${BASE_URL}/categories/${slug}`,
+    },
   };
 }
 
@@ -60,8 +83,25 @@ export default async function CategoryPage({
     directPersonalities.length +
     subSections.reduce((n, s) => n + s.personalities.length, 0);
 
+  const allPersonalities = [
+    ...directPersonalities,
+    ...subSections.flatMap((s) => s.personalities),
+  ];
+
   return (
     <div className="bg-blanc min-h-screen">
+      <CategoryJsonLd category={category} persons={allPersonalities} />
+      <BreadcrumbJsonLd
+        items={[
+          { label: "PixMémoire", url: BASE_URL },
+          { label: "Catégories", url: `${BASE_URL}/#categories` },
+          {
+            label: category.name,
+            url: `${BASE_URL}/categories/${slug}`,
+          },
+        ]}
+      />
+
       <section className="border-b border-gris-bordure bg-blanc py-12 md:py-16">
         <div className="mx-auto max-w-6xl px-4">
           <Breadcrumbs
