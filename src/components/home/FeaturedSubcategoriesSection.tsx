@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Star } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { PersonalityCard } from "@/components/personality/PersonalityCard";
 import { AnimatedReveal } from "@/components/common/AnimatedReveal";
 import {
@@ -19,52 +19,57 @@ export async function FeaturedSubcategoriesSection() {
   );
 
   return (
-    <section id="categories" className="py-10 md:py-16 bg-blanc">
-      <div className="mx-auto max-w-6xl px-4">
-        <AnimatedReveal className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 text-primary mb-3">
-            <Star className="h-4 w-4 fill-primary" />
-            <span className="text-sm font-medium tracking-widest uppercase">
-              À découvrir
-            </span>
+    <section id="categories" className="py-14 md:py-20 bg-background">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <AnimatedReveal className="mb-12 md:mb-16">
+          <div className="flex items-end justify-between border-b border-gris-bordure pb-6">
+            <div>
+              <span className="text-[11px] font-semibold text-primary tracking-[0.2em] uppercase">
+                Explorer
+              </span>
+              <h2 className="font-serif text-3xl md:text-4xl font-bold text-noir mt-1.5 leading-tight">
+                Par thème
+              </h2>
+            </div>
+            <p className="hidden md:block text-sm text-gris-moyen max-w-xs text-right leading-relaxed">
+              Parcourez les personnalités par domaine et sous-catégorie.
+            </p>
           </div>
-          <h2 className="font-serif text-3xl md:text-4xl font-bold text-noir">
-            Explorer par thème
-          </h2>
-          <p className="text-gris-moyen mt-3 max-w-xl mx-auto">
-            Parcourez les personnalités par domaine et sous-catégorie.
-          </p>
         </AnimatedReveal>
 
-        <div className="space-y-16">
+        <div className="space-y-14 md:space-y-20">
           {sections.map(({ sub, personalities }, sectionIndex) => (
-            <AnimatedReveal key={sub.id} delay={sectionIndex * 0.1}>
+            <AnimatedReveal key={sub.id} delay={sectionIndex * 0.08}>
               <div>
-                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
-                  <div>
-                    <p className="text-xs font-medium text-primary tracking-widest uppercase mb-1">
-                      {sub.category.name}
-                    </p>
-                    <h3 className="font-serif text-2xl md:text-3xl font-bold text-noir">
-                      {sub.name}
-                    </h3>
-                    {sub.description && (
-                      <p className="text-gris-moyen mt-2 max-w-lg text-sm">
-                        {sub.description}
+                <div className="flex items-center justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1 h-8 rounded-full bg-primary" />
+                    <div>
+                      <p className="text-[10px] font-semibold text-gris-moyen tracking-[0.15em] uppercase leading-none mb-1">
+                        {sub.category.name}
                       </p>
-                    )}
+                      <h3 className="font-serif text-xl md:text-2xl font-bold text-noir leading-tight">
+                        {sub.name}
+                      </h3>
+                    </div>
                   </div>
                   <Link
                     href={`/categories/${sub.category.slug}/${sub.slug}`}
-                    className="inline-flex items-center gap-2 rounded-full border border-gris-bordure bg-blanc px-5 py-2.5 text-sm font-medium text-noir hover:border-primary hover:text-primary transition-all"
+                    className="group inline-flex items-center gap-1.5 text-sm font-medium text-noir hover:text-primary transition-colors shrink-0"
                   >
-                    Voir tout
-                    <ArrowRight className="h-4 w-4" />
+                    <span className="hidden sm:inline">Voir tout</span>
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   </Link>
                 </div>
 
+                {sub.description && (
+                  <p className="text-sm text-gris-moyen mb-6 max-w-2xl leading-relaxed">
+                    {sub.description}
+                  </p>
+                )}
+
                 {personalities.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
                     {personalities.map((personality) => (
                       <PersonalityCard
                         key={personality.id}
@@ -74,7 +79,7 @@ export async function FeaturedSubcategoriesSection() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-gris-moyen">
+                  <p className="text-sm text-gris-moyen py-8">
                     Aucune personnalité dans cette sous-catégorie pour le moment.
                   </p>
                 )}

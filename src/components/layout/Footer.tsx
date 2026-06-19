@@ -5,7 +5,6 @@ import { Mail, Phone, MapPin, ExternalLink, Heart, ArrowUpRight } from "lucide-r
 const navLinks = [
   { label: "Accueil", href: "/" },
   { label: "Personnalités", href: "/personnalites" },
-  { label: "Catégories", href: "/categories" },
   { label: "À propos", href: "/a-propos" },
   { label: "Contact", href: "/contact" },
 ];

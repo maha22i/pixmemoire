@@ -65,7 +65,7 @@ export default async function SubcategoryPage({
   const personalities = await getPersonalitiesBySubcategory(slug, subslug);
 
   return (
-    <div className="bg-blanc min-h-screen">
+    <div className="bg-background min-h-screen">
       <BreadcrumbJsonLd
         items={[
           { label: "PixMémoire", url: BASE_URL },
@@ -81,8 +81,8 @@ export default async function SubcategoryPage({
         ]}
       />
 
-      <section className="border-b border-gris-bordure bg-blanc py-12 md:py-16">
-        <div className="mx-auto max-w-6xl px-4">
+      <section className="bg-blanc border-b border-gris-bordure">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 pb-8 md:pb-10">
           <Breadcrumbs
             items={[
               { label: "Accueil", href: "/" },
@@ -92,20 +92,22 @@ export default async function SubcategoryPage({
             ]}
           />
 
-          <div className="flex flex-col items-center text-center gap-4 mt-4">
-            <p className="text-sm font-medium text-primary tracking-widest uppercase">
-              {category.name}
-            </p>
-            <h1 className="font-serif text-4xl md:text-5xl font-bold text-noir">
-              {subcategory.name}
-            </h1>
-            {subcategory.description && (
-              <p className="text-lg text-gris-moyen max-w-xl">
-                {subcategory.description}
-              </p>
-            )}
-            <p className="text-sm text-gris-moyen">
-              <span className="text-primary font-semibold">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div>
+              <span className="text-[11px] font-semibold text-primary tracking-[0.2em] uppercase">
+                {category.name}
+              </span>
+              <h1 className="font-serif text-3xl md:text-4xl font-bold text-noir mt-1.5 leading-tight">
+                {subcategory.name}
+              </h1>
+              {subcategory.description && (
+                <p className="text-sm text-gris-moyen mt-2 max-w-lg leading-relaxed">
+                  {subcategory.description}
+                </p>
+              )}
+            </div>
+            <p className="text-sm text-gris-moyen shrink-0 pb-0.5">
+              <span className="text-noir font-semibold">
                 {personalities.length}
               </span>{" "}
               {personalities.length > 1 ? "personnalités" : "personnalité"}
@@ -114,10 +116,10 @@ export default async function SubcategoryPage({
         </div>
       </section>
 
-      <section className="py-12 md:py-16">
-        <div className="mx-auto max-w-6xl px-4">
+      <section className="py-8 md:py-12">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {personalities.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
               {personalities.map((personality) => (
                 <PersonalityCard
                   key={personality.id}
